@@ -1,4 +1,4 @@
-# 🌦️ Weather-Aware Order Delay Checker
+#  Weather-Aware Order Delay Checker
 
 A Python script that checks real-time weather for customer delivery cities and automatically flags orders as **Delayed** when bad weather is detected — with AI-generated personalized apology messages powered by **Gemini**.
 
@@ -56,7 +56,7 @@ OPENWEATHER_API_KEY=your_openweathermap_key_here
 GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-> ⚠️ Never commit this file to GitHub. Add `.env` to your `.gitignore`.
+
 
 ### 4. Get Your API Keys
 
@@ -132,7 +132,7 @@ INFO: Done! orders.json has been updated.
 
 ---
 
-## 🔑 Key Technical Decisions
+##  Key Technical Decisions
 
 | Feature | Approach |
 |---|---|
