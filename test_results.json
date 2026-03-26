@@ -1,0 +1,63 @@
+{
+  "summary": {
+    "total_orders": 4,
+    "delayed": 2,
+    "on_time": 1,
+    "errors": 1,
+    "all_tests_passed": true
+  },
+  "orders": [
+    {
+      "order_id": "1001",
+      "customer": "Alice Smith",
+      "city": "New York",
+      "weather_condition": "Rain",
+      "status": "Delayed",
+      "apology_message": "Hi Alice Smith, your order to New York is delayed due to Rain. We appreciate your patience!",
+      "test_result": {
+        "status_check": "PASS \u2705",
+        "apology_check": "PASS \u2705",
+        "overall": "PASS \u2705"
+      }
+    },
+    {
+      "order_id": "1002",
+      "customer": "Bob Jones",
+      "city": "Mumbai",
+      "weather_condition": "Snow",
+      "status": "Delayed",
+      "apology_message": "Hi Bob Jones, your order to Mumbai is delayed due to Snow. We appreciate your patience!",
+      "test_result": {
+        "status_check": "PASS \u2705",
+        "apology_check": "PASS \u2705",
+        "overall": "PASS \u2705"
+      }
+    },
+    {
+      "order_id": "1003",
+      "customer": "Charlie Green",
+      "city": "London",
+      "weather_condition": "Clear",
+      "status": "On Time",
+      "apology_message": "N/A \u2014 weather is clear, no delay",
+      "test_result": {
+        "status_check": "PASS \u2705",
+        "apology_check": "PASS \u2705",
+        "overall": "PASS \u2705"
+      }
+    },
+    {
+      "order_id": "1004",
+      "customer": "InvalidCity123",
+      "city": "InvalidCity123",
+      "weather_condition": "N/A",
+      "status": "Error - City Not Found",
+      "apology_message": "N/A \u2014 weather is clear, no delay",
+      "test_result": {
+        "status_check": "PASS \u2705",
+        "apology_check": "PASS \u2705",
+        "overall": "PASS \u2705"
+      }
+    }
+  ]
+}
