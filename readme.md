@@ -1,4 +1,4 @@
-# 🌦️ Weather-Aware Order Delay Checker
+#  Weather-Aware Order Delay Checker
 
 A Python script that checks real-time weather for customer delivery cities and automatically flags orders as **Delayed** when bad weather is detected — with AI-generated personalized apology messages powered by **Gemini**.
 
@@ -106,7 +106,7 @@ OPENWEATHER_API_KEY=your_openweathermap_key_here
 GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-> ⚠️ Never commit this file to GitHub. Add `.env` to your `.gitignore`.
+
 
 ### 4. Get Your API Keys
 
@@ -182,44 +182,7 @@ INFO: Done! orders.json has been updated.
 
 ---
 
-## ⚠️ Why Apology Messages May Not Appear in orders.json
-
-When you run the script and see all orders marked as **"On Time"** with no `apology_message` field, **this is not a bug** — it means the weather in those cities is genuinely clear at the time of running.
-
-The `apology_message` field is only added to an order when:
-- The city's live weather status is `Rain`, `Snow`, or `Extreme`
-- i.e. the order gets marked as `Delayed`
-
-Since the script fetches **real-time weather**, results will vary depending on when you run it. On a clear day in New York, Mumbai, and London, all three orders will correctly show `"On Time"` and no apology is needed or generated.
-
-### ✅ How to Verify the Apology Function Works
-
-If you want to test the AI apology message without waiting for bad weather, temporarily add this inside `process_order()` in `main.py`, replacing the `fetch_weather()` call:
-
-```python
-# TEMPORARY TEST — forces order 1001 to simulate Rain, remove after testing
-if order["order_id"] == "1001":
-    weather = "Rain"
-else:
-    weather = await fetch_weather(session, city)
-```
-
-Run the script — you'll see an `apology_message` generated for Alice's order. Remove this test code once verified.
-
-**Expected output when delay is triggered:**
-```json
-{
-  "order_id": "1001",
-  "customer": "Alice Smith",
-  "city": "New York",
-  "status": "Delayed",
-  "apology_message": "Hi Alice, your order to New York is delayed due to Rain. We appreciate your patience!"
-}
-```
-
----
-
-## 🔑 Key Technical Decisions
+##  Key Technical Decisions
 
 | Feature | Approach |
 |---|---|
