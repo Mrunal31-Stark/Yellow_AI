@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>WeatherGate — Order Delay System</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:      #03040d;
+    --surface: #0b0c1a;
+    --border:  #161728;
+    --accent:  #e8ff47;
+    --accent2: #ff6b35;
+    --danger:  #ff3b5c;
+    --success: #39ff8f;
+    --muted:   #2a2a44;
+    --text:    #dde0f5;
+    --subtext: #555577;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 24px 80px;
+    overflow-x: hidden;
+    position: relative;
+  }
+  #starfield { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+  .nebula { position: fixed; border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0; opacity: 0.07; }
+  .nebula-1 { width: 600px; height: 600px; background: radial-gradient(circle, #3a1c8a, transparent 70%); top: -200px; right: -100px; }
+  .nebula-2 { width: 500px; height: 500px; background: radial-gradient(circle, #0a3060, transparent 70%); bottom: 100px; left: -150px; }
+  .nebula-3 { width: 300px; height: 300px; background: radial-gradient(circle, #1a4a2a, transparent 70%); top: 40%; left: 40%; opacity: 0.05; }
+  .wrapper { position: relative; z-index: 1; width: 100%; max-width: 780px; }
+  header { margin-bottom: 56px; }
+  .eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; letter-spacing: 0.2em; color: var(--accent);
+    text-transform: uppercase; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .eyebrow::before { content: ''; display: inline-block; width: 24px; height: 1px; background: var(--accent); }
+  h1 { font-size: clamp(2.2rem, 6vw, 3.8rem); font-weight: 800; line-height: 1.0; letter-spacing: -0.03em; }
+  h1 span { color: var(--accent); }
+  .subtitle { margin-top: 14px; color: var(--subtext); font-size: 0.95rem; max-width: 480px; line-height: 1.6; }
+  .section-label {
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--subtext); margin-bottom: 12px;
+  }
+  .orders-grid { display: grid; gap: 2px; margin-bottom: 40px; }
+  .order-row {
+    display: grid; grid-template-columns: 70px 1fr 1fr 120px;
+    align-items: center; gap: 16px; padding: 14px 20px;
+    background: rgba(11,12,26,0.75); backdrop-filter: blur(8px);
+    border: 1px solid var(--border); transition: border-color 0.3s;
+  }
+  .order-row:first-child { border-radius: 8px 8px 0 0; }
+  .order-row:last-child  { border-radius: 0 0 8px 8px; }
+  .order-row.header-row  { background: transparent; border-color: transparent; padding-bottom: 6px; }
+  .order-row.header-row span { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--subtext); }
+  .order-row.updated { border-color: rgba(232,255,71,0.2); }
+  .order-id { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--subtext); }
+  .customer-name { font-weight: 600; font-size: 0.95rem; }
+  .city-name { color: var(--subtext); font-size: 0.9rem; }
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
+    border-radius: 4px; font-family: 'Space Mono', monospace;
+    font-size: 10px; letter-spacing: 0.08em; font-weight: 700;
+    text-transform: uppercase; white-space: nowrap;
+  }
+  .status-badge.pending { background: rgba(85,85,119,0.15); color: var(--subtext); border: 1px solid var(--muted); }
+  .status-badge.delayed { background: rgba(255,59,92,0.12);  color: var(--danger);  border: 1px solid rgba(255,59,92,0.3); }
+  .status-badge.ontime  { background: rgba(57,255,143,0.10); color: var(--success); border: 1px solid rgba(57,255,143,0.25); }
+  .status-badge.error   { background: rgba(255,107,53,0.12); color: var(--accent2); border: 1px solid rgba(255,107,53,0.3); }
+  .status-badge.loading { background: rgba(232,255,71,0.08); color: var(--accent);  border: 1px solid rgba(232,255,71,0.2); }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+  .status-badge.loading .status-dot { animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.2} }
+  .weather-chip { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--accent); opacity: 0; transition: opacity 0.4s; margin-left: 4px; }
+  .weather-chip.visible { opacity: 1; }
+  .btn-fetch {
+    width: 100%; padding: 18px 32px; background: var(--accent); color: #03040d;
+    border: none; border-radius: 8px; font-family: 'Syne', sans-serif;
+    font-size: 1rem; font-weight: 800; letter-spacing: 0.04em; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    transition: transform 0.15s, box-shadow 0.15s; margin-bottom: 16px;
+  }
+  .btn-fetch:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 40px rgba(232,255,71,0.2); }
+  .btn-fetch:active:not(:disabled) { transform: translateY(0); }
+  .btn-fetch:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-fetch.running { background: #c8df30; }
+  .btn-icon { font-size: 1.1rem; }
+  .btn-fetch.running .btn-icon { animation: spin 1.4s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .progress-bar-wrap { height: 2px; background: var(--border); border-radius: 2px; margin-bottom: 32px; overflow: hidden; opacity: 0; transition: opacity 0.3s; }
+  .progress-bar-wrap.visible { opacity: 1; }
+  .progress-bar { height: 100%; background: linear-gradient(90deg, var(--accent), #a8ff47); width: 0%; transition: width 0.5s ease; border-radius: 2px; box-shadow: 0 0 8px rgba(232,255,71,0.5); }
+  .log-box {
+    background: rgba(11,12,26,0.85); backdrop-filter: blur(8px);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 16px 20px; font-family: 'Space Mono', monospace;
+    font-size: 11px; line-height: 1.9; color: var(--subtext);
+    max-height: 160px; overflow-y: auto; margin-bottom: 32px; display: none;
+  }
+  .log-box.visible { display: block; }
+  .log-line.info    { color: var(--text); }
+  .log-line.success { color: var(--success); }
+  .log-line.warn    { color: var(--accent); }
+  .log-line.error   { color: var(--danger); }
+  .btn-view {
+    width: 100%; padding: 16px 32px; background: transparent; color: var(--accent);
+    border: 1px solid rgba(232,255,71,0.4); border-radius: 8px;
+    font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700;
+    cursor: pointer; display: none; align-items: center; justify-content: center;
+    gap: 10px; transition: background 0.2s, transform 0.15s; margin-bottom: 24px;
+  }
+  .btn-view.visible { display: flex; }
+  .btn-view:hover { background: rgba(232,255,71,0.06); transform: translateY(-1px); }
+  .json-panel { display: none; background: rgba(11,12,26,0.9); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 24px; }
+  .json-panel.visible { display: block; }
+  .json-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid var(--border); }
+  .json-panel-title { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--subtext); letter-spacing: 0.1em; }
+  .copy-btn { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--accent); background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: background 0.2s; }
+  .copy-btn:hover { background: rgba(232,255,71,0.1); }
+  pre { padding: 20px; font-family: 'Space Mono', monospace; font-size: 11.5px; line-height: 1.8; color: var(--text); overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
+  .json-key  { color: #7ec8e3; }
+  .json-str  { color: #c3e88d; }
+  .json-num  { color: #f78c6c; }
+  .json-bool { color: var(--accent); }
+  .json-null { color: var(--subtext); }
+  .json-delayed { color: var(--danger) !important; }
+  .json-ontime  { color: var(--success) !important; }
+  .apology-section { margin-top: 8px; display: none; }
+  .apology-section.visible { display: block; }
+  .apology-section .section-label { margin-bottom: 12px; }
+  .apology-cards { display: grid; gap: 10px; }
+  .apology-card { background: rgba(11,12,26,0.75); backdrop-filter: blur(8px); border: 1px solid rgba(255,59,92,0.2); border-left: 3px solid var(--danger); border-radius: 6px; padding: 14px 18px; animation: fadeUp 0.5s ease forwards; }
+  .apology-card .order-ref { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--danger); letter-spacing: 0.1em; margin-bottom: 6px; }
+  .apology-card .msg { font-size: 0.9rem; color: var(--text); line-height: 1.6; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<canvas id="starfield"></canvas>
+<div class="nebula nebula-1"></div>
+<div class="nebula nebula-2"></div>
+<div class="nebula nebula-3"></div>
+
+<div class="wrapper">
+  <header>
+    <div class="eyebrow">Delivery Intelligence System</div>
+    <h1>Weather<span>Gate</span></h1>
+    <p class="subtitle">Fetches live weather for all pending orders concurrently and flags delays — powered by OpenWeatherMap &amp; Gemini.</p>
+  </header>
+
+  <div class="section-label">Pending Orders</div>
+  <div class="orders-grid">
+    <div class="order-row header-row">
+      <span>ID</span><span>Customer</span><span>City</span><span>Status</span>
+    </div>
+    <div class="order-row" id="row-1001">
+      <span class="order-id">#1001</span>
+      <span class="customer-name">Alice Smith</span>
+      <span class="city-name">New York</span>
+      <span class="status-badge pending"><span class="status-dot"></span>Pending</span>
+    </div>
+    <div class="order-row" id="row-1002">
+      <span class="order-id">#1002</span>
+      <span class="customer-name">Bob Jones</span>
+      <span class="city-name">Mumbai</span>
+      <span class="status-badge pending"><span class="status-dot"></span>Pending</span>
+    </div>
+    <div class="order-row" id="row-1003">
+      <span class="order-id">#1003</span>
+      <span class="customer-name">Charlie Green</span>
+      <span class="city-name">London</span>
+      <span class="status-badge pending"><span class="status-dot"></span>Pending</span>
+    </div>
+    <div class="order-row" id="row-1004">
+      <span class="order-id">#1004</span>
+      <span class="customer-name">InvalidCity123</span>
+      <span class="city-name">InvalidCity123</span>
+      <span class="status-badge pending"><span class="status-dot"></span>Pending</span>
+    </div>
+  </div>
+
+  <button class="btn-fetch" id="fetchBtn" onclick="runFetch()">
+    <span class="btn-icon">⛅</span>
+    <span id="btnText">Fetch Current Weather &amp; Update Orders</span>
+  </button>
+
+  <div class="progress-bar-wrap" id="progressWrap">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <div class="log-box" id="logBox"></div>
+
+  <button class="btn-view" id="viewJsonBtn" onclick="toggleJson()">
+    <span>{ }</span>
+    <span id="viewBtnText">View Updated orders.json</span>
+  </button>
+
+  <div class="json-panel" id="jsonPanel">
+    <div class="json-panel-header">
+      <span class="json-panel-title">orders.json — UPDATED</span>
+      <button class="copy-btn" onclick="copyJson()">COPY</button>
+    </div>
+    <pre id="jsonOutput"></pre>
+  </div>
+
+  <div class="apology-section" id="apologySection">
+    <div class="section-label">AI-Generated Apology Messages</div>
+    <div class="apology-cards" id="apologyCards"></div>
+  </div>
+</div>
+
+<script>
+// ── Starfield ─────────────────────────────────────────────────────────────────
+(function() {
+  const canvas = document.getElementById("starfield");
+  const ctx = canvas.getContext("2d");
+  let stars = [];
+
+  function resize() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    stars = [];
+    const count = Math.floor((canvas.width * canvas.height) / 14000);
+    for (let i = 0; i < count; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 1.1 + 0.2,
+        opacity: Math.random() * 0.45 + 0.08,
+        speed: Math.random() * 0.007 + 0.002,
+        dir: Math.random() > 0.5 ? 1 : -1,
+      });
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const s of stars) {
+      s.opacity += s.speed * s.dir;
+      if (s.opacity > 0.55 || s.opacity < 0.05) s.dir *= -1;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(210, 218, 255, ${s.opacity})`;
+      ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener("resize", resize);
+  resize();
+  draw();
+})();
+
+// ── App ───────────────────────────────────────────────────────────────────────
+const ORDERS = [
+  { order_id: "1001", customer: "Alice Smith",    city: "New York",       status: "Pending" },
+  { order_id: "1002", customer: "Bob Jones",      city: "Mumbai",         status: "Pending" },
+  { order_id: "1003", customer: "Charlie Green",  city: "London",         status: "Pending" },
+  { order_id: "1004", customer: "InvalidCity123", city: "InvalidCity123", status: "Pending" },
+];
+const DELAY_CONDITIONS = new Set(["Rain","Snow","Extreme","Thunderstorm","Tornado","Squall","Ash","Sand","Dust","Fog","Blizzard"]);
+let updatedOrders = [];
+let jsonVisible = false;
+
+function log(msg, type="info") {
+  const box = document.getElementById("logBox");
+  const el = document.createElement("div");
+  el.className = `log-line ${type}`;
+  el.textContent = `[${new Date().toLocaleTimeString("en-US",{hour12:false})}] ${msg}`;
+  box.appendChild(el);
+  box.scrollTop = box.scrollHeight;
+}
+
+function setRowStatus(id, text, cls, weather) {
+  const row = document.getElementById(`row-${id}`);
+  if (!row) return;
+  const badge = row.querySelector(".status-badge");
+  badge.className = `status-badge ${cls}`;
+  badge.innerHTML = `<span class="status-dot"></span>${text}`;
+  if (weather) {
+    let chip = row.querySelector(".weather-chip");
+    if (!chip) { chip = document.createElement("span"); chip.className = "weather-chip"; row.querySelector(".city-name").after(chip); }
+    chip.textContent = weather;
+    setTimeout(() => chip.classList.add("visible"), 80);
+  }
+  if (cls !== "pending") row.classList.add("updated");
+}
+
+function setProgress(p) { document.getElementById("progressBar").style.width = p + "%"; }
+
+// All calls go to our Express server — API keys never leave the backend
+async function fetchWeather(city) {
+  const res  = await fetch(`/api/weather?city=${encodeURIComponent(city)}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `City '${city}' not found`);
+  return data.weather;
+}
+
+async function generateApology(customerName, city, weatherCondition) {
+  const res  = await fetch("/api/apology", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ customerName, city, weatherCondition }),
+  });
+  const data = await res.json();
+  return data.apology || `Hi ${customerName}, your order to ${city} is delayed due to ${weatherCondition}. We appreciate your patience!`;
+}
+
+async function runFetch() {
+  const btn = document.getElementById("fetchBtn");
+  updatedOrders = JSON.parse(JSON.stringify(ORDERS));
+  document.getElementById("logBox").innerHTML = "";
+  document.getElementById("logBox").classList.add("visible");
+  document.getElementById("progressWrap").classList.add("visible");
+  setProgress(0);
+  ["viewJsonBtn","jsonPanel","apologySection"].forEach(id => document.getElementById(id).classList.remove("visible"));
+  document.getElementById("apologyCards").innerHTML = "";
+  document.getElementById("jsonOutput").innerHTML = "";
+  jsonVisible = false;
+  document.getElementById("viewBtnText").textContent = "View Updated orders.json";
+  ORDERS.forEach(o => setRowStatus(o.order_id, "Pending", "pending", null));
+  btn.disabled = true; btn.classList.add("running");
+  document.getElementById("btnText").textContent = "Fetching weather…";
+  log("Firing concurrent weather requests…", "info");
+
+  const tasks = updatedOrders.map(async (order, i) => {
+    setRowStatus(order.order_id, "Checking…", "loading", null);
+    try {
+      const weather = await fetchWeather(order.city);
+      order.weather_condition = weather;
+      setProgress(((i+1)/ORDERS.length)*65);
+      if (DELAY_CONDITIONS.has(weather)) {
+        log(`⚠ Order ${order.order_id} (${order.city}) — ${weather} detected, generating apology…`, "warn");
+        setRowStatus(order.order_id, "Delayed", "delayed", weather);
+        const apology = await generateApology(order.customer, order.city, weather);
+        order.status = "Delayed"; order.apology_message = apology;
+        log(`✓ Apology generated for ${order.customer}`, "success");
+      } else {
+        order.status = "On Time";
+        log(`✓ Order ${order.order_id} (${order.city}) — ${weather}, On Time`, "success");
+        setRowStatus(order.order_id, "On Time", "ontime", weather);
+      }
+    } catch(err) {
+      order.status = "Error - City Not Found"; order.weather_condition = "N/A";
+      log(`✗ ${err.message}`, "error");
+      setRowStatus(order.order_id, "Error", "error", null);
+    }
+    return order;
+  });
+
+  await Promise.all(tasks);
+  setProgress(100);
+  log("─────────────────────────────", "info");
+  log("All orders processed. orders.json updated ✓", "success");
+
+  const delayed = updatedOrders.filter(o => o.status === "Delayed");
+  if (delayed.length) {
+    const cards = document.getElementById("apologyCards");
+    delayed.forEach(o => {
+      const c = document.createElement("div"); c.className = "apology-card";
+      c.innerHTML = `<div class="order-ref">ORDER #${o.order_id} — ${o.city} — ${o.weather_condition}</div><div class="msg">${o.apology_message}</div>`;
+      cards.appendChild(c);
+    });
+    document.getElementById("apologySection").classList.add("visible");
+  }
+
+  setTimeout(() => document.getElementById("viewJsonBtn").classList.add("visible"), 300);
+  btn.disabled = false; btn.classList.remove("running");
+  document.getElementById("btnText").textContent = "Re-fetch Weather";
+  document.querySelector(".btn-icon").textContent = "🔄";
+}
+
+function toggleJson() {
+  const panel = document.getElementById("jsonPanel");
+  jsonVisible = !jsonVisible;
+  if (jsonVisible) {
+    document.getElementById("jsonOutput").innerHTML = syntaxHighlight(JSON.stringify(updatedOrders, null, 2));
+    panel.classList.add("visible");
+    document.getElementById("viewBtnText").textContent = "Hide orders.json";
+  } else {
+    panel.classList.remove("visible");
+    document.getElementById("viewBtnText").textContent = "View Updated orders.json";
+  }
+}
+
+function syntaxHighlight(json) {
+  return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, m => {
+    let c = "json-num";
+    if (/^"/.test(m)) {
+      c = /:$/.test(m) ? "json-key" : "json-str";
+      if (m.includes("Delayed")) c += " json-delayed";
+      if (m.includes("On Time")) c += " json-ontime";
+    } else if (/true|false/.test(m)) c = "json-bool";
+    else if (/null/.test(m)) c = "json-null";
+    return `<span class="${c}">${m}</span>`;
+  });
+}
+
+function copyJson() {
+  navigator.clipboard.writeText(JSON.stringify(updatedOrders, null, 2));
+  const b = document.querySelector(".copy-btn");
+  b.textContent = "COPIED!"; setTimeout(() => b.textContent = "COPY", 1500);
+}
+</script>
+</body>
+</html>
